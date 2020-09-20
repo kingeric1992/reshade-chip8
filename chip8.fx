@@ -1,14 +1,14 @@
 /*
     Chip8 emulator for ReShade by kingeric1992.
+
     https://en.wikipedia.org/wiki/CHIP-8
 
     note:
         getKey() in this impl is waiting for keyPressed, instead of keyReleased
 */
 #include "VK.fxh"
-/*
-    todo: check getKey handling with timer
-*/
+
+
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  Custom Roms ( could use fxh to load)
@@ -66,8 +66,70 @@ static const uint pong1[] = {
     0xD4557415, 0xF229D455, 0x00EE8080, 0x80808080,
     0x80000000, 0x0000
 };
+static const uint pong_classic[] = {
+    0x6A026B0C, 0x6C3F6D0C, 0xA2EADAB6, 0xDCD66E00,
+    0x22D46603, 0x68026060, 0xF015F007, 0x3000121A,
+    0xC7177708, 0x69FFA2F0, 0xD671A2EA, 0xDAB6DCD6,
+    0x6001E0A1, 0x7BFE6004, 0xE0A17B02, 0x601F8B02,
+    0xDAB6600C, 0xE0A17DFE, 0x600DE0A1, 0x7D02601F,
+    0x8D02DCD6, 0xA2F0D671, 0x86848794, 0x603F8602,
+    0x611F8712, 0x46021278, 0x463F1282, 0x471F69FF,
+    0x47006901, 0xD671122A, 0x68026301, 0x807080B5,
+    0x128A68FE, 0x630A8070, 0x80D53F01, 0x12A26102,
+    0x80153F01, 0x12BA8015, 0x3F0112C8, 0x80153F01,
+    0x12C26020, 0xF01822D4, 0x8E3422D4, 0x663E3301,
+    0x660368FE, 0x33016802, 0x121679FF, 0x49FE69FF,
+    0x12C87901, 0x49026901, 0x6004F018, 0x76014640,
+    0x76FE126C, 0xA2F2FE33, 0xF265F129, 0x64146500,
+    0xD4557415, 0xF229D455, 0x00EE8080, 0x80808080,
+    0x80000000, 0x00000000
+};
 
-#define _FLATTEN_
+static const uint space_invaders[] = {
+    0x12255350, 0x41434520, 0x494E5641, 0x44455253, 0x20302E39, 0x31204279, 0x20446176, 0x69642057,
+    0x494E5445, 0x52600061, 0x006208A3, 0xDDD01871, 0x08F21E31, 0x20122D70, 0x08610030, 0x40122D69,
+    0x056C156E, 0x00239160, 0x0AF015F0, 0x07300012, 0x4B23917E, 0x01124566, 0x00681C69, 0x006A046B,
+    0x0A6C046D, 0x3C6E0F00, 0xE0237523, 0x51FD1560, 0x04E09E12, 0x7D237538, 0x0078FF23, 0x756006E0,
+    0x9E128B23, 0x75383978, 0x01237536, 0x00129F60, 0x05E09E12, 0xE9660165, 0x1B8480A3, 0xD9D451A3,
+    0xD9D45175, 0xFF35FF12, 0xAD660012, 0xE9D4513F, 0x0112E9D4, 0x51660083, 0x40730383, 0xB562F883,
+    0x22620833, 0x0012C923, 0x7D820643, 0x0812D333, 0x1012D523, 0x7D820633, 0x1812DD23, 0x7D820643,
+    0x2012E733, 0x2812E923, 0x7D3E0013, 0x07790649, 0x1869006A, 0x046B0A6C, 0x047DF46E, 0x0F00E023,
+    0x512375FD, 0x15126FF7, 0x07370012, 0x6FFD1523, 0x518BA43B, 0x12131B7C, 0x026AFC3B, 0x0213237C,
+    0x026A0423, 0x513C1812, 0x6F00E0A4, 0xDD601461, 0x08620FD0, 0x1F7008F2, 0x1E302C13, 0x3360FFF0,
+    0x15F00730, 0x001341F0, 0x0A00E0A7, 0x06FE6512, 0x25A3C1F9, 0x1E610823, 0x69810623, 0x69810623,
+    0x69810623, 0x697BD000, 0xEE80E080, 0x123000DB, 0xC67B0C00, 0xEEA3D960, 0x1CD80400, 0xEE23518E,
+    0x23235160, 0x05F018F0, 0x15F00730, 0x00138900, 0xEE6A008D, 0xE06B04E9, 0xA11257A6, 0x0CFD1EF0,
+    0x6530FF13, 0xAF6A006B, 0x046D016E, 0x011397A5, 0x0AF01EDB, 0xC67B087D, 0x017A013A, 0x07139700,
+    0xEE3C7EFF, 0xFF99997E, 0xFFFF2424, 0xE77EFF3C, 0x3C7EDB81, 0x423C7EFF, 0xDB10387C, 0xFE00007F,
+    0x003F007F, 0x00000001, 0x01010303, 0x03030000, 0x3F202020, 0x20202020, 0x203F0808, 0xFF0000FE,
+    0x00FC00FE, 0x0000007E, 0x42426262, 0x62620000, 0xFF000000, 0x00000000, 0x00FF0000, 0xFF007D00,
+    0x417D057D, 0x7D0000C2, 0xC2C6446C, 0x28380000, 0xFF000000, 0x00000000, 0x00FF0000, 0xFF00F710,
+    0x14F7F704, 0x0400007C, 0x44FEC2C2, 0xC2C20000, 0xFF000000, 0x00000000, 0x00FF0000, 0xFF00EF20,
+    0x28E8E82F, 0x2F0000F9, 0x85C5C5C5, 0xC5F90000, 0xFF000000, 0x00000000, 0x00FF0000, 0xFF00BE00,
+    0x203020BE, 0xBE0000F7, 0x04E78585, 0x84F40000, 0xFF000000, 0x00000000, 0x00FF0000, 0xFF00007F,
+    0x003F007F, 0x000000EF, 0x28EF00E0, 0x606F0000, 0xFF000000, 0x00000000, 0x00FF0000, 0xFF0000FE,
+    0x00FC00FE, 0x000000C0, 0x00C0C0C0, 0xC0C00000, 0xFC040404, 0x04040404, 0x04FC1010, 0xFFF981B9,
+    0x8B9A9AFA, 0x00FA8A9A, 0x9A9B99F8, 0xE62525F4, 0x34343400, 0x17143437, 0x3626C7DF, 0x50505CD8,
+    0xD8DF00DF, 0x111F121B, 0x19D97C44, 0xFE868686, 0xFC84FE82, 0x82FEFE80, 0xC0C0C0FE, 0xFC82C2C2,
+    0xC2FCFE80, 0xF8C0C0FE, 0xFE80F0C0, 0xC0C0FE80, 0xBE8686FE, 0x8686FE86, 0x86861010, 0x10101010,
+    0x18181848, 0x48789C90, 0xB0C0B09C, 0x8080C0C0, 0xC0FEEE92, 0x92868686, 0xFE828686, 0x86867C82,
+    0x8686867C, 0xFE82FEC0, 0xC0C07C82, 0xC2CAC47A, 0xFE86FE90, 0x9C84FEC0, 0xFE0202FE, 0xFE103030,
+    0x30308282, 0xC2C2C2FE, 0x828282EE, 0x38108686, 0x969292EE, 0x82443838, 0x44828282, 0xFE303030,
+    0xFE021EF0, 0x80FE0000, 0x00000606, 0x00000060, 0x60C00000, 0x00000000, 0x18181818, 0x00187CC6,
+    0x0C180018, 0x0000FEFE, 0x0000FE82, 0x868686FE, 0x08080818, 0x1818FE02, 0xFEC0C0FE, 0xFE021E06,
+    0x06FE84C4, 0xC4FE0404, 0xFE80FE06, 0x06FEC0C0, 0xC0FE82FE, 0xFE020206, 0x06067C44, 0xFE8686FE,
+    0xFE82FE06, 0x060644FE, 0x4444FE44, 0xA8A8A8A8, 0xA8A8A86C, 0x5A000C18, 0xA8304E7E, 0x00121866,
+    0x6CA85A66, 0x54246600, 0x48481812, 0xA80690A8, 0x12007E30, 0x12A88430, 0x4E721866, 0xA8A8A8A8,
+    0xA8A89054, 0x78A84878, 0x6C72A812, 0x186C7266, 0x5490A872, 0x2A18A830, 0x4E7E0012, 0x18666CA8,
+    0x7254A85A, 0x66187E18, 0x4E72A872, 0x2A183066, 0xA8304E7E, 0x006C3054, 0x4E9CA8A8, 0xA8A8A8A8,
+    0xA848547E, 0x18A89054, 0x7866A86C, 0x2A305AA8, 0x8430722A, 0xA8D8A800, 0x4E12A8E4, 0xA2A8004E,
+    0x12A86C2A, 0x545472A8, 0x8430722A, 0xA8DE9CA8, 0x722A18A8, 0x0C54485A, 0x78721866, 0xA866185A,
+    0x5466726C, 0xA8722A00, 0x72A8722A, 0x18A8304E, 0x7E001218, 0x666CA800, 0x6618A830, 0x4E0C6618,
+    0x006C304E, 0x24A8722A, 0x183066A8, 0x1E54660C, 0x189CA824, 0x545412A8, 0x42780C3C, 0xA8AEA8A8,
+    0xA8A8A8A8, 0xA8FF0000, 0x00000000, 0x00000000, 0x00000000, 0x00000000
+};
+
+#define _FLATTEN_ // [flatten]
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  setup
@@ -75,24 +137,20 @@ static const uint pong1[] = {
 
 // type in ROM
 #ifndef SELECT_ROM_
-    #define SELECT_ROM_ pong1
+    #define SELECT_ROM_ rom_chip8_pic
+#endif
+// different game might use different frequency
+#ifndef CPU_FREQUENCY
+    #define CPU_FREQUENCY 500
+#endif
+#ifndef TIMER_FREQENCY
+    #define TIMER_FREQENCY 60
 #endif
 
 // #ifndef BREAK_ON_INS
 //     #define BREAK_ON_INS 0NNN
 // #endif
 
-
-// #define _GETINS(a) _ ## a
-// #define GETINS(a) _GETINS()
-
-// #define BREAK_0NNN
-
-// bool break_on_ins(uint op) {
-
-
-
-// }
 
 /*
     default keymap:
@@ -133,7 +191,7 @@ static const uint pong1[] = {
 // screen space coord (norm)
 static const float4 gStatRect = float4(0.8,0.1,  0.8 + 0.1 * (BUFFER_HEIGHT * BUFFER_RCP_WIDTH),0.2); // TR
 static const float4 gRegRect  = float4(0.8,0.21, 0.8 + 0.2 * (BUFFER_HEIGHT * BUFFER_RCP_WIDTH),0.3); // TR
-static const float4 gViewRect = float4(0.1,0.1, 0.7,0.9); // LEFT
+static const float4 gViewRect = float4(0.01,0.01, 0.79,0.99); // LEFT
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  controls
@@ -318,29 +376,16 @@ uint xor8( uint A, uint B ) {
 #define ADDR_SP 20                  // stack ptr
 #define ADDR_ST 21                  // stack
 
-
-
-// bypass for global static
-// float gOffset(float v, bool set )   { static float _v; if(set) _v = v; return _v;  }
-// float gOffset()                     { return gOffset(0,false); }
-// void  gOffset(float v)              { gOffset(v, true); } // updated value.
-// uint2 gWrites(uint2 v, bool set )   { static uint2 _v; if(set) _v = v; return _v;  }
-// uint2 gWrites()                     { return gWrites(0,false); }
-// void  gWrites(uint2 v)              { gWrites(v, true); } // updated reg offset.
-
 /*
     no static variable type, passing val through function arg is the only way
 */
-
-
-// void  _set( uint addr, uint v)      { gOffset((.5+addr)/(.5*REG_WIDTH)-1.), gWrites(bytes(v)); }
-// void  _set_lo( uint addr, uint v)   { gOffset((.5+addr)/(.5*REG_WIDTH)-1.), gWrites(uint2(0,LOW(v))); }
 
 #define _set(a,b)                   { vo.x = (a), vo.y = (b); }
 #define _set_lo(a,b)                { vo.x = (a), vo.y = LOW((b)); }
 #define OUT inout uint2 vo
 
 uint  _get_lo(   uint addr)         { return tex2Dfetch(sampRegA, int4(addr,0,0,0)).y * 0xFF; }
+uint  _get_loB(  uint addr)         { return tex2Dfetch(sampRegB, int4(addr,0,0,0)).y * 0xFF; }
 uint  _get(      uint addr )        { return uint16(tex2Dfetch(sampRegA, int4(addr,0,0,0)).xy * 0xFF ); }
 uint  _getB(     uint addr )        { return uint16(tex2Dfetch(sampRegB, int4(addr,0,0,0)).xy * 0xFF ); }
 uint  _mem(      uint addr )        { return tex2Dfetch(sampMem, int4(addr,0,0,0)).x * 0xFF; }
@@ -480,7 +525,6 @@ void _key_get2( OUT,uint op)    { [flatten] if(KEY()) CP(vo,CP() + 2);  } // hal
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  Register Instructions
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-void _time_run( OUT)            { [flatten] if(T() > 0) T(vo,T() - 1); }
 void _rnd(      OUT,uint op)    { VX(vo, op, AND(gRND,LOW(op))); }
 
 void _sub_ret0( OUT)            { SP(vo,SP() - 1); }       // decrement SP
@@ -519,16 +563,12 @@ void _key_get0( OUT,uint op)    { [flatten] if(KEY()) VX(vo,op,KEY()-1); }
 void _time_get( OUT,uint op)    { VX(vo,op,T()); }
 void _time_set( OUT,uint op)    { T(vo,LOW(VX(op))); }
 void _time_fx(  OUT,uint op)    { /**/ }
+void _time_run( OUT)            { [flatten] if(T() > 0) T(vo,T() - 1); }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  Cycle
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-// handles timer;
-void cmd3( OUT, uint op ) {
-    // if opcode is await key & no key present -> halt.
-    _FLATTEN_ if( ((op >> 12) != 0xF) || (LOW(op) != 0x0A)) _time_run(vo);
-}
 // handles CP access
 void cmd2( OUT, uint op ) {
     _FLATTEN_
@@ -574,8 +614,6 @@ void cmd1( OUT, uint op ) {
     } break;
     }
 }
-
-
 void cmd0( OUT, uint op ) {
     _FLATTEN_
     switch(op >> 12)
@@ -620,48 +658,53 @@ void cmd0( OUT, uint op ) {
     }
 }
 
+
+
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  Default Rom
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 // test rom.
-static const uint rom_chip8_pic[41] = {
-//    00  02      04  06      08  0A      0C  0E
-    0x00E0A248, 0x6000611E, 0x6200D202, 0xD2127208, //0x200 (D202,D212) // I = 0x248, V0 = 00, V1 = 1E, V2 = 00,
-    0x3240120A, 0x6000613E, 0x6202A24A, 0xD02ED12E, //0x210 D02E D12E   // I = 0x24A, v0 = 00, V1 = 3E, V2 = 02
-    0x720ED02E, 0xD12EA258, 0x600B6108, 0xD01F700A, //0x220
-    0xA267D01F, 0x700AA276, 0xD01F7003, 0xA285D01F, //0x230
-    0x700AA294, 0xD01F1246, 0xFFFFC0C0, 0xC0C0C0C0, //0x240 (0x1246) // end of program.
-    0xC0C0C0C0, 0xC0C0C0C0, 0xFF808080, 0x80808080,
-    0x80808080, 0x8080FF81, 0x81818181, 0x8181FF81,
-    0x81818181, 0x81818080, 0x80808080, 0x80808080,
-    0x80808080, 0x80FF8181, 0x81818181, 0xFF808080,
-    0x80808080, 0xFF818181, 0x818181FF, 0x81818181,
-    0x8181FFFF
+static const uint rom_chip8_pic[] = {
+/*          00  02      04  06      08  0A      0C  0E  */
+/* 200 */ 0x00E0A248, 0x6000611E, 0x6200D202, 0xD2127208,
+/* 210 */ 0x3240120A, 0x6000613E, 0x6202A24A, 0xD02ED12E,
+/* 220 */ 0x720ED02E, 0xD12EA258, 0x600B6108, 0xD01F700A,
+/* 230 */ 0xA267D01F, 0x700AA276, 0xD01F7003, 0xA285D01F,
+/* 240 */ 0x700AA294, 0xD01F1246, 0xFFFFC0C0, 0xC0C0C0C0,
+/* 250 */ 0xC0C0C0C0, 0xC0C0C0C0, 0xFF808080, 0x80808080,
+/* 260 */ 0x80808080, 0x8080FF81, 0x81818181, 0x8181FF81,
+/* 270 */ 0x81818181, 0x81818080, 0x80808080, 0x80808080,
+/* 280 */ 0x80808080, 0x80FF8181, 0x81818181, 0xFF808080,
+/* 290 */ 0x80808080, 0xFF818181, 0x818181FF, 0x81818181,
+/* 2A0 */ 0x8181FFFF
 };
 
 static const uint rom_keypad_test[] = {
-    0x124E0819, 0x01010801, 0x0F010109, 0x08090F09, //200
-    0x01110811, 0x0F110119, 0x0F191601, 0x16091611, //210
-    0x1619FCFC, 0xFCFCFCFC, 0xFC00A202, 0x820EF21E, //220
-    0x8206F165, 0x00EEA202, 0x820EF21E, 0x8206F155, //230
-    0x00EE6F10, 0xFF15FF07, 0x3F001246, 0x00EE00E0, //240
-    0x6200222A, 0xF229D015, 0x70FF71FF, 0x22367201, //
-    0x32101252, 0xF20A222A, 0xA222D017, 0x2242D017,
-    0x12640000
+/*          00  02      04  06      08  0A      0C  0E  */
+/* 200 */ 0x124E0819, 0x01010801, 0x0F010109, 0x08090F09,
+/* 210 */ 0x01110811, 0x0F110119, 0x0F191601, 0x16091611,
+/* 220 */ 0x1619FCFC, 0xFCFCFCFC, 0xFC00A202, 0x820EF21E,
+/* 230 */ 0x8206F165, 0x00EEA202, 0x820EF21E, 0x8206F155,
+/* 240 */ 0x00EE6F10, 0xFF15FF07, 0x3F001246, 0x00EE00E0,
+/* 250 */ 0x6200222A, 0xF229D015, 0x70FF71FF, 0x22367201,
+/* 260 */ 0x32101252, 0xF20A222A, 0xA222D017, 0x2242D017,
+/* 270 */ 0x12640000
 };
 
 static const uint rom_delay_time_test[] = {
-    0x6601221E, 0xF40A4402, 0x73014408, 0x83653405,
-    0x1202F315, 0xF307221E, 0x33001214, 0x120200E0,
-    0x6500A23A, 0xF333F265, 0xF029D565, 0xF1296505,
-    0xD565F229, 0x650AD565, 0x00EE0000
+/*          00  02      04  06      08  0A      0C  0E  */
+/* 200 */ 0x6601221E, 0xF40A4402, 0x73014408, 0x83653405,
+/* 210 */ 0x1202F315, 0xF307221E, 0x33001214, 0x120200E0,
+/* 220 */ 0x6500A23A, 0xF333F265, 0xF029D565, 0xF1296505,
+/* 230 */ 0xD565F229, 0x650AD565, 0x00EE0000
 };
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  Shader Flows. (init, pause, step through)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+// MACRO to fallback to default token if using non-predefined keyword.
 // #define SET(a) 1
 // #if !(SELECT_ROM_ + 0) // not found
 //     #undef SELECT_ROM_
@@ -671,7 +714,6 @@ static const uint rom_delay_time_test[] = {
 //     #define SET(a) a // revert name
 // #endif
 
-
 // write starting pos to reg
 float2 ps_reg_init( uint4 vpos ) {
     return ((vpos.x == ADDR_CP) * bytes(ADDR_PROG) +
@@ -680,29 +722,35 @@ float2 ps_reg_init( uint4 vpos ) {
 float  ps_mem_init( uint4 vpos ) {
     int prog = vpos.x - ADDR_PROG, chr = vpos.x - ADDR_CHAR;
     uint rom  = split32( SELECT_ROM_[prog / 4] )[prog % 4];
-
     return ( prog < 0 ? charSprites[chr]:LOW(rom)  ) / float(0xFF);
 }
-bool    init()      { return CP() < 0x200; } // CP should not be in the reserved space.
-bool    delay()     { return (gFrame % 60); }
+bool    init()          { return CP() < 0x200; } // CP should not be in the reserved space.
+bool    delay()         { return (CPU_FREQUENCY < 60) && ((gFrame % 60) > CPU_FREQUENCY ); }
+bool    timer()         { return false; }// return ((gFrame % 60) >= TIMER_FREQENCY ); }
 bool    halt( uint op)    { // halt
-    // cond:
-    //bool cond = (op >> 12) == 0xD; //
-    bool cond = LOW(op) == 0x55;
+    bool cond;
+    // cond = (op >> 12) == 0xD;
+    // cond = LOW(op) == 0x55;
     return pause() || (debug() && !next());
 }
 
-#define HALT(op)    if (halt(op)) return float4(0,0,-2,1)
-#define DELAY()     //if (delay()) return float4(0,0,-2,1) //slowmo
-#define LIN_INIT(a) if (init())  return float4((a)*2.-1,0,0,1)  // init buffer
-#define RUN_INIT(a) if (init())  return float4(0,0,-2,1)        // bypass
-#define REG_INIT(a) if (init())  return ps_reg_init(a)
-#define MEM_INIT(a) if (init())  return ps_mem_init(a)
+#define HALT(op)        if (halt(op))   return float4(0,0,-2,1)
+#define DELAY()         if (delay())    return float4(0,0,-2,1)         //
+#define DELAY_TIME()    if (timer())    return
+#define LIN_INIT(a)     if (init())     return float4((a)*2.-1,0,0,1)   // init buffer
+#define RUN_INIT()      if (init())     return float4(0,0,-2,1)         // bypass
+#define REG_INIT(a)     if (init())     return ps_reg_init(a)
+#define MEM_INIT(a)     if (init())     return ps_mem_init(a)
 
 #undef OUT
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  Shader Main Loop
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+void time( out uint2 vo, uint op) {
+    DELAY_TIME();
+    _FLATTEN_ if( ((op >> 12) != 0xF) || (LOW(op) != 0x0A)) _time_run(vo);
+}
 
 float4 vs_run( uint vid : SV_VERTEXID, nointerpolation out uint2 arg : TEXCOORD ) : SV_POSITION {
     arg = 0;
@@ -715,17 +763,13 @@ float4 vs_run( uint vid : SV_VERTEXID, nointerpolation out uint2 arg : TEXCOORD 
     RUN_INIT(); // bypass
     DELAY();
 
-
-    //if ( ((op >> 12) == 0xF) && (LOW(op) == 0x29) && !next() ) return float4(0,0,-2,1);
-
-    //if (!debug() && next()) {
     _FLATTEN_
     switch( vid ) {
     case 0: OP(  vo,op); break; // push opcode to ADDR_OP
     case 1: cmd0(vo,op); break; // ins0
     case 2: cmd1(vo,op); break; // ins1
     case 3: cmd2(vo,op); break; // CP
-    case 4: cmd3(vo,op); break; // Timer
+    case 4: time(vo,op); break; // copy timer in first itor in a frame
     }
     arg = bytes(vo.y);
     return float4((.5+vo.x)/(.5*REG_WIDTH)-1.,0,0,1);
@@ -733,6 +777,7 @@ float4 vs_run( uint vid : SV_VERTEXID, nointerpolation out uint2 arg : TEXCOORD 
 float2 ps_run( float4 vpos : SV_POSITION, nointerpolation uint2 arg : TEXCOORD ) : SV_TARGET {
     return arg/float(0xFF);
 }
+
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  Shader Memory Access ( MEM -> REG )
@@ -835,10 +880,16 @@ float2 ps_copy( float4 vpos : SV_POSITION ) : SV_TARGET {
 //  Shader Present
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+static const float gAspect = (BUFFER_WIDTH * BUFFER_RCP_HEIGHT);
+
 // uv for different mapping mode. stretch, clip, centered
 float4 vs_present( uint vid : SV_VERTEXID, out float4 uv : TEXCOORD0 ) : SV_POSITION {
     uv.xy = vid.xx == uint2(2,1)? (2.).xx:(0.).xx;
-    uv.zw = (uv.xy - gViewRect.xy) / (gViewRect.zw - gViewRect.xy);
+
+    uv.zw = (gViewRect.zw - gViewRect.xy);
+    uv.zw /= max(1., uv.zw/uv.wz * float2(.5*gAspect,2./gAspect));
+    uv.zw = (uv.xy - (gViewRect.zw + gViewRect.xy)*.5 + uv.zw*.5)/uv.zw;
+
     return float4( uv.x*2-1, 1.-uv.y*2, 0,1);
 }
 float4 ps_present( float4 vpos : SV_POSITION, float4 uv : TEXCOORD0 ) : SV_TARGET {
@@ -873,7 +924,6 @@ float4 ps_status( float4 vpos : SV_POSITION, float2 uv : TEXCOORD0 ) : SV_TARGET
 //  Shader Debug (CP, op)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
 float4 vs_debug(uint vid : SV_VERTEXID, out float4 uv : TEXCOORD) : SV_POSITION {
     float4 rect = gRegRect*2. - 1.;
     rect.yw *= -1.;
@@ -885,7 +935,6 @@ float4 vs_debug(uint vid : SV_VERTEXID, out float4 uv : TEXCOORD) : SV_POSITION 
     uv.z  = 4. - uv.z;                   // flip cursor pos
     return rect;
 }
-
 float4 ps_debug( float4 vpos : SV_POSITION, float4 uv : TEXCOORD ) : SV_TARGET {
     uv.xy %= float2(5,6);
     uint4 iuv = uv;
@@ -897,16 +946,15 @@ float4 ps_debug( float4 vpos : SV_POSITION, float4 uv : TEXCOORD ) : SV_TARGET {
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  techniques
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//supposedly should run at 60Hz
+
 technique chip8 {
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//  Main Loop (single cycle per frame)
+//  Main Loop ( differed from the batched loop )
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
     pass run {
         PrimitiveTopology   = POINTLIST;    // 1 for passing working op,
-        VertexCount         = 5;            // 2 for instruction, 1 for CP, 1 for timer.
+        VertexCount         = 5;            // 2 for instruction, 1 for CP, 1 for copy timer.
         VertexShader        = vs_run;       // readA writeB
         PixelShader         = ps_run;
         RenderTarget        = texRegB;
@@ -951,56 +999,31 @@ technique chip8 {
         RenderTarget        = texFront;
     }
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//  Main Loop (single cycle per frame)
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#if (CPU_FREQUENCY > 60)
+#include "chip8_mainloop.fxh"
+#endif
+#if (CPU_FREQUENCY > 120)
+#include "chip8_mainloop.fxh"
+#endif
+#if (CPU_FREQUENCY > 180)
+#include "chip8_mainloop.fxh"
+#endif
+#if (CPU_FREQUENCY > 240)
+#include "chip8_mainloop.fxh"
+#endif
+#if (CPU_FREQUENCY > 300)
+#include "chip8_mainloop.fxh"
+#endif
+#if (CPU_FREQUENCY > 360)
+#include "chip8_mainloop.fxh"
+#endif
+#if (CPU_FREQUENCY > 420)
+#include "chip8_mainloop.fxh"
+#endif
+#if (CPU_FREQUENCY > 480)
+#include "chip8_mainloop.fxh"
+#endif
 
-    pass run {
-        PrimitiveTopology   = POINTLIST;    // 1 for passing working op,
-        VertexCount         = 5;            // 2 for instruction, 1 for CP, 1 for timer.
-        VertexShader        = vs_run;       // readA writeB
-        PixelShader         = ps_run;
-        RenderTarget        = texRegB;
-    }
-//  memory -> register
-    pass read {
-        PrimitiveTopology   = LINELIST;
-        VertexCount         = 2;
-        VertexShader        = vs_read;      // MEM -> REG
-        PixelShader         = ps_read;
-        RenderTarget        = texRegB;
-    }
-//  register -> memory:  init(), _mem_dump(), _mem_bcd()
-    pass write {
-        PrimitiveTopology   = LINELIST;
-        VertexCount         = 2;
-        VertexShader        = vs_write;     // REG -> MEM
-        PixelShader         = ps_write;
-        RenderTarget        = texMem;       // doesn't hanve mem-mem access
-    }
-//  display update disp()/disp_clear()
-    pass draw {                             // render quad on buffer
-        PrimitiveTopology   = TRIANGLESTRIP;
-        VertexCount         = 4;
-        VertexShader        = vs_draw;      // either disp() or disp_clear()
-        PixelShader         = ps_draw;      // read texA, texFront, texMem
-        RenderTarget        = texBack;
-    }
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-//  Write Back
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    pass lineCopy {
-        PrimitiveTopology   = LINELIST;
-        VertexCount         = 2;
-        VertexShader        = vs_lineCopy;
-        PixelShader         = ps_lineCopy;
-        RenderTarget        = texRegA;
-    }
-    pass copy {
-        VertexShader        = vs_copy;
-        PixelShader         = ps_copy;
-        RenderTarget        = texFront;
-    }
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  present
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1025,5 +1048,4 @@ technique chip8 {
         SrcBlend            = SRCALPHA;
         DestBlend           = INVSRCALPHA;
     }
-
 }
